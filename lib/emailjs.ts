@@ -3,8 +3,8 @@ import emailjs from '@emailjs/browser';
 export const initEmailJS = () => {
   if (typeof window !== 'undefined') {
     try {
-      emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_USER_ID as string);
-      console.log('EmailJS initialized successfully');
+      emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY as string);
+      console.log('EmailJS initialized successfully with key:', process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ? 'Present' : 'Missing');
     } catch (error) {
       console.error('EmailJS initialization error:', error);
     }
@@ -22,7 +22,6 @@ export interface EmailParams {
   to_email?: string;
 }
 
-// Send booking email function
 export const sendBookingEmail = async (params: EmailParams): Promise<{ success: boolean; error?: string }> => {
   try {
     const emailParams = {
@@ -30,13 +29,11 @@ export const sendBookingEmail = async (params: EmailParams): Promise<{ success: 
       to_email: params.to_email || 'chukingroup@gmail.com',
     };
 
-    console.log('Sending booking email with params:', emailParams);
-
     const response = await emailjs.send(
       process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID as string,
       process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID as string,
       emailParams,
-      process.env.NEXT_PUBLIC_EMAILJS_USER_ID as string
+      process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY as string
     );
 
     if (response.status === 200) {
@@ -53,7 +50,6 @@ export const sendBookingEmail = async (params: EmailParams): Promise<{ success: 
   }
 };
 
-// FIXED: Send confirmation email to customer with correct template variables
 export const sendConfirmationEmail = async (customerEmail: string, customerName: string, bookingDetails?: {
   service: string;
   date: string;
@@ -70,43 +66,26 @@ export const sendConfirmationEmail = async (customerEmail: string, customerName:
       };
     }
 
-    // CRITICAL FIX: Match EXACTLY with your EmailJS template variables
-    // Your template uses {{email}} for recipient, not {{from_email}}
     const templateParams = {
-      // Recipient address - MUST be 'email' to match your template {{email}}
-      email: customerEmail,                // {{email}} in template - FIXED
-      
-      // Customer details
-      from_name: customerName,             // {{from_name}} in template
-      customer_name: customerName,         // {{customer_name}} in template  
-      
-      // Booking details
-      service: bookingDetails?.service || 'Plumbing Service',     // {{service}}
-      date: bookingDetails?.date || 'Not specified',             // {{date}}
-      time: bookingDetails?.time || 'Not specified',             // {{time}}
-      phone: bookingDetails?.phone || 'Not provided',            // {{phone}}
-      message: bookingDetails?.message || 'None',                // {{message}}
-      
-      // Business details
-      company_name: 'Birmingham Plumbing Pro',    // {{company_name}}
-      business_phone: '0121 234 5678',           // {{business_phone}}
-      
-      // Current date/time
-      confirmation_date: new Date().toLocaleDateString('en-GB'), // {{confirmation_date}}
-      confirmation_time: new Date().toLocaleTimeString('en-GB'), // {{confirmation_time}}
-      
-      // Additional parameters that might be needed for reply-to
-      reply_to: customerEmail,                 // For reply-to functionality
-      customer_email: customerEmail            // Alternative parameter name
+      email: customerEmail,
+      from_name: customerName,
+      customer_name: customerName,
+      service: bookingDetails?.service || 'Plumbing Service',
+      date: bookingDetails?.date || 'Not specified',
+      time: bookingDetails?.time || 'Not specified',
+      phone: bookingDetails?.phone || 'Not provided',
+      message: bookingDetails?.message || 'None',
+      company_name: 'Birmingham Plumbing Pro',
+      business_phone: '0121 234 5678',
+      confirmation_date: new Date().toLocaleDateString('en-GB'),
+      confirmation_time: new Date().toLocaleTimeString('en-GB'),
     };
-
-    console.log('Sending confirmation email with params:', templateParams);
 
     const response = await emailjs.send(
       process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID as string,
       process.env.NEXT_PUBLIC_EMAILJS_CONFIRMATION_TEMPLATE_ID as string,
       templateParams,
-      process.env.NEXT_PUBLIC_EMAILJS_USER_ID as string
+      process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY as string
     );
 
     if (response.status === 200) {
@@ -122,20 +101,13 @@ export const sendConfirmationEmail = async (customerEmail: string, customerName:
     if (error instanceof Error) {
       errorMsg = error.message;
     } else if (typeof error === 'object' && error !== null) {
-      // Handle EmailJS specific error format with status and text
       if ('status' in error && 'text' in error) {
         errorMsg = `EmailJS Error ${error.status}: ${error.text}`;
       } else {
-        try {
-          errorMsg = JSON.stringify(error);
-        } catch {
-          errorMsg = String(error);
-        }
+        errorMsg = JSON.stringify(error);
       }
-    } else if (typeof error === 'string') {
-      errorMsg = error;
     }
-    console.error('EmailJS confirmation error:', error);
+    console.error('EmailJS confirmation error:', errorMsg);
     return { success: false, error: errorMsg };
   }
 };
