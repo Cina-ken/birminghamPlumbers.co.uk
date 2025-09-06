@@ -48,28 +48,9 @@ export const sendBookingEmail = async (params: EmailParams): Promise<{ success: 
         error: `Failed to send email: Status ${response.status} - ${response.text}` 
       };
     }
-  } catch (error: any) {
-    console.error('EmailJS error details:', error);
-    
-    if (error && typeof error === 'object') {
-      if ('status' in error && 'text' in error) {
-        return { 
-          success: false, 
-          error: `EmailJS Error ${error.status}: ${error.text}` 
-        };
-      }
-      if ('message' in error) {
-        return { 
-          success: false, 
-          error: `EmailJS Error: ${error.message}` 
-        };
-      }
-    }
-    
-    return { 
-      success: false, 
-      error: 'Unknown error occurred while sending email' 
-    };
+  } catch (error: unknown) {
+    console.error('EmailJS error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
   }
 };
 
@@ -130,43 +111,8 @@ export const sendConfirmationEmail = async (customerEmail: string, customerName:
         error: `Failed to send confirmation email: Status ${response.status} - ${response.text}` 
       };
     }
-  } catch (error: any) {
-    console.error('EmailJS confirmation error details:', error);
-    
-    if (error && typeof error === 'object') {
-      if ('status' in error && 'text' in error) {
-        const status = error.status;
-        const text = error.text;
-        
-        let userFriendlyMessage = text;
-        switch (status) {
-          case 422:
-            if (text.includes('recipients address is empty')) {
-              userFriendlyMessage = 'Email template configuration error - recipient field is empty.';
-            }
-            break;
-          case 400:
-            userFriendlyMessage = 'Invalid email parameters. Please check your EmailJS configuration.';
-            break;
-        }
-        
-        return { 
-          success: false, 
-          error: userFriendlyMessage
-        };
-      }
-      
-      if ('message' in error) {
-        return { 
-          success: false, 
-          error: `Confirmation failed: ${error.message}` 
-        };
-      }
-    }
-    
-    return { 
-      success: false, 
-      error: 'Unknown error occurred while sending confirmation email' 
-    };
+  } catch (error: unknown) {
+    console.error('EmailJS confirmation error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
   }
 };
