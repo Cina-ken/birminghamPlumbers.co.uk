@@ -70,19 +70,47 @@ export default function BookingForm() {
       const result = await sendBookingEmail(emailParams);
 
       if (result.success) {
-        // Send confirmation email to customer
-        await sendConfirmationEmail(formData.email, formData.name);
+        // FIXED: Send confirmation email to customer with booking details
+        const bookingDetails = {
+          service: formData.service,
+          date: formData.date,
+          time: formData.time,
+          phone: formData.phone,
+          message: formData.message,
+        };
 
-        setShowSuccess(true);
-        setFormData({
-          name: "",
-          phone: "",
-          email: "",
-          service: "",
-          date: "",
-          time: "",
-          message: "",
-        });
+        const confirmationResult = await sendConfirmationEmail(
+          formData.email, 
+          formData.name, 
+          bookingDetails  // 🔧 ADDED: Pass booking details to populate template
+        );
+
+        if (confirmationResult.success) {
+          setShowSuccess(true);
+          setFormData({
+            name: "",
+            phone: "",
+            email: "",
+            service: "",
+            date: "",
+            time: "",
+            message: "",
+          });
+        } else {
+          // Booking sent but confirmation failed - still show success but log the error
+          console.error("Confirmation email failed:", confirmationResult.error);
+          setShowSuccess(true);
+          setFormData({
+            name: "",
+            phone: "",
+            email: "",
+            service: "",
+            date: "",
+            time: "",
+            message: "",
+          });
+          // Optionally show a warning that booking was received but confirmation email failed
+        }
       } else {
         setError(true);
         setErrorMessage(result.error || "Failed to send booking request");
