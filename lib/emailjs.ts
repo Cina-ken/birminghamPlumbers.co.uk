@@ -1,4 +1,3 @@
-// FIXED EmailJS implementation with correct variable names
 import emailjs from '@emailjs/browser';
 
 export const initEmailJS = () => {
@@ -54,7 +53,7 @@ export const sendBookingEmail = async (params: EmailParams): Promise<{ success: 
   }
 };
 
-// FIXED Send confirmation email to customer
+// FIXED: Send confirmation email to customer with correct template variables
 export const sendConfirmationEmail = async (customerEmail: string, customerName: string, bookingDetails?: {
   service: string;
   date: string;
@@ -71,19 +70,22 @@ export const sendConfirmationEmail = async (customerEmail: string, customerName:
       };
     }
 
-    // CRITICAL FIX: Match these variable names exactly with your EmailJS template
+    // CRITICAL FIX: Match EXACTLY with your EmailJS template variables
+    // Your template uses {{email}} for recipient, not {{from_email}}
     const templateParams = {
-      // Customer details
-      from_name: customerName,           // {{from_name}} in template
-      customer_name: customerName,       // {{customer_name}} in template  
-      from_email: customerEmail,         // {{from_email}} in template
+      // Recipient address - MUST be 'email' to match your template {{email}}
+      email: customerEmail,                // {{email}} in template - FIXED
       
-      // Booking details - EXACT MATCH with your HTML template variables
+      // Customer details
+      from_name: customerName,             // {{from_name}} in template
+      customer_name: customerName,         // {{customer_name}} in template  
+      
+      // Booking details
       service: bookingDetails?.service || 'Plumbing Service',     // {{service}}
-      date: bookingDetails?.date || 'Not specified',             // {{date}} - matches your template
-      time: bookingDetails?.time || 'Not specified',             // {{time}} - matches your template
-      phone: bookingDetails?.phone || 'Not provided',            // {{phone}} if you add it later
-      message: bookingDetails?.message || 'None',                // {{message}} if you add it later
+      date: bookingDetails?.date || 'Not specified',             // {{date}}
+      time: bookingDetails?.time || 'Not specified',             // {{time}}
+      phone: bookingDetails?.phone || 'Not provided',            // {{phone}}
+      message: bookingDetails?.message || 'None',                // {{message}}
       
       // Business details
       company_name: 'Birmingham Plumbing Pro',    // {{company_name}}
@@ -92,6 +94,10 @@ export const sendConfirmationEmail = async (customerEmail: string, customerName:
       // Current date/time
       confirmation_date: new Date().toLocaleDateString('en-GB'), // {{confirmation_date}}
       confirmation_time: new Date().toLocaleTimeString('en-GB'), // {{confirmation_time}}
+      
+      // Additional parameters that might be needed for reply-to
+      reply_to: customerEmail,                 // For reply-to functionality
+      customer_email: customerEmail            // Alternative parameter name
     };
 
     console.log('Sending confirmation email with params:', templateParams);
@@ -112,7 +118,24 @@ export const sendConfirmationEmail = async (customerEmail: string, customerName:
       };
     }
   } catch (error: unknown) {
+    let errorMsg = 'Unknown error occurred';
+    if (error instanceof Error) {
+      errorMsg = error.message;
+    } else if (typeof error === 'object' && error !== null) {
+      // Handle EmailJS specific error format with status and text
+      if ('status' in error && 'text' in error) {
+        errorMsg = `EmailJS Error ${error.status}: ${error.text}`;
+      } else {
+        try {
+          errorMsg = JSON.stringify(error);
+        } catch {
+          errorMsg = String(error);
+        }
+      }
+    } else if (typeof error === 'string') {
+      errorMsg = error;
+    }
     console.error('EmailJS confirmation error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
+    return { success: false, error: errorMsg };
   }
 };
